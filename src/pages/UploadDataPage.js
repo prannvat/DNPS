@@ -15,6 +15,7 @@ function UploadDataPage() {
       const reader = new FileReader();
       reader.onload = (e) => {
         const fileContent = e.target.result;
+        console.log('File content:', fileContent);
         const hash = CryptoJS.SHA256(fileContent).toString();
         setFileHash(hash);
         setStatus('File uploaded successfully!');
