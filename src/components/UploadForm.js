@@ -1,5 +1,3 @@
-// src/components/UploadForm.js
-
 import React, { useState } from 'react';
 import {
   Button,
@@ -13,6 +11,9 @@ import {
   MenuItem,
 } from '@mui/material';
 import { CloudUpload } from '@mui/icons-material';
+import CryptoJS from 'crypto-js';
+import { ethers } from 'ethers';
+import HashToXRPLABI from '../abis/HashToXRPL.json'; // Import the ABI of the contract
 
 function UploadForm() {
   const [file, setFile] = useState(null);
@@ -21,20 +22,50 @@ function UploadForm() {
   const [tags, setTags] = useState('');
   const [dataType, setDataType] = useState('');
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [status, setStatus] = useState('');
 
   const handleFileSelect = (event) => {
     setFile(event.target.files[0]);
   };
 
   const handleUpload = async () => {
-    if (!file || !dataTitle || !dataType) {
-      alert('Please provide all required information.');
-      return;
-    }
 
-    // Implement the upload logic here
-    // For example, using Axios to send the file to the backend
-    // Update uploadProgress using setUploadProgress()
+    // Read the file content and compute the hash
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const fileContent = e.target.result;
+      const hash = CryptoJS.SHA256(fileContent).toString(CryptoJS.enc.Hex);
+
+      // Submit the hash to the smart contract
+      try {
+        await submitHashToContract(hash);
+        setStatus('Hash submitted to smart contract successfully!');
+      } catch (error) {
+        setStatus('Error submitting hash: ' + error.message);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const submitHashToContract = async (hashKey) => {
+    // Connect to the Ethereum network
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const signer = provider.getSigner();
+
+    // Contract address and ABI
+    const contractAddress = '0x46A30F35B844049BdC068AbB7fCE8463e68BB3Dc'; // Replace with your deployed contract address
+    const contract = new ethers.Contract(contractAddress, HashToXRPLABI, signer);
+
+    // Submit the hash key to the contract
+    console.log('Submitting hash key to contract:', hashKey);
+    try {
+      const tx = await contract.submitHashKey(ethers.utils.formatBytes32String(hashKey));
+      console.log('Transaction hash:', tx.hash);
+      await tx.wait();
+    } catch (error) {
+      console.error('Error submitting hash key to contract:', error);
+      throw error;
+    }
   };
 
   return (
@@ -117,6 +148,13 @@ function UploadForm() {
             Upload Data
           </Button>
         </Grid>
+        {status && (
+          <Grid item xs={12}>
+            <Typography variant="body1" style={{ marginTop: '1rem', color: 'green' }}>
+              Status: {status}
+            </Typography>
+          </Grid>
+        )}
       </Grid>
     </form>
   );
