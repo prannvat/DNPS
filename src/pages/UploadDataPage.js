@@ -25,27 +25,35 @@ function UploadDataPage() {
   };
 
   const submitHashToContract = async (hashKey) => {
-    // Connect to the Ethereum network
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    const signer = await provider.getSigner();
-
-    // Contract address and ABI
-    const contractAddress = '0x46A30F35B844049BdC068AbB7fCE8463e68BB3Dc'; // Replace with your deployed contract address
-    const contract = new ethers.Contract(contractAddress, HashToXRPLABI, signer);
-
-    // Submit the hash key to the contract
-    console.log('Submitting hash key to contract:', hashKey);
     try {
-      const tx = await contract.submitHashKey(ethers.toUtf8Bytes(hashKey));
+      // Connect to the Ethereum network
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+  
+      // Contract address and ABI
+      const contractAddress = '0x46A30F35B844049BdC068AbB7fCE8463e68BB3Dc'; // Replace with your deployed contract address
+      const contract = new ethers.Contract(contractAddress, HashToXRPLABI, signer);
+  
+      // Prepare the hashKey
+      const formattedHashKey = '0x' + hashKey; // Prefix with '0x'
+  
+      // Submit the hash key to the contract
+      console.log('Submitting hash key to contract:', formattedHashKey);
+  
+      const tx = await contract.submitHashKey(formattedHashKey);
+  
       console.log('Transaction hash:', tx.hash);
       await tx.wait();
       setStatus('Hash submitted to smart contract successfully!');
     } catch (error) {
-      console.error('Error submitting hash key to contract:', error);
-      setStatus('Error submitting hash: ' + error.message);
+      if (error.code === 'ACTION_REJECTED') {
+        setStatus('User rejected the connection request.');
+      } else {
+        console.error('Error submitting hash key to contract:', error);
+        setStatus('Error submitting hash: ' + error.message);
+      }
     }
   };
-
   const handleUploadAndSubmit = async () => {
     if (!fileHash) {
       alert('Please upload a file first.');
